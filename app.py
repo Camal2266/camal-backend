@@ -514,7 +514,57 @@ def vtpass_headers():
         "api-key": api_key,
         "secret-key": secret_key
     }
-    
+
+def vtpass_get_headers():
+    api_key = os.getenv("VTPASS_API_KEY")
+    public_key = os.getenv("VTPASS_PUBLIC_KEY")
+
+    return {
+        "api-key": api_key,
+        "public-key": public_key
+    }
+
+
+@app.route("/api/data/plans", methods=["GET"])
+def data_plans():
+    network = request.args.get("network", "").lower()
+
+    service_ids = {
+        "airtel": "airtel-data",
+        "mtn": "mtn-data",
+        "glo": "glo-data",
+        "9mobile": "etisalat-data"
+    }
+
+    service_id = service_ids.get(network)
+
+    if not service_id:
+        return jsonify({
+            "success": False,
+            "message": "Invalid network"
+        }), 400
+
+    try:
+        response = requests.get(
+            f"{VTPASS_BASE_URL}/service-variations",
+            headers=vtpass_get_headers(),
+            params={"serviceID": service_id},
+            timeout=30
+        )
+
+        result = response.json()
+
+        return jsonify({
+            "success": True,
+            "serviceID": service_id,
+            "plans": result.get("content", {}).get("variations", [])
+        })
+
+    except Exception:
+        return jsonify({
+            "success": False,
+            "message": "Unable to load data plans"
+        }), 500
 def generate_request_id():
     from datetime import datetime, timezone, timedelta
 
