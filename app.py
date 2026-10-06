@@ -499,7 +499,48 @@ def fund_wallet():
         "message": "Wallet funded",
         "balance": new_user["balance"]
     })
+# ========================
+# VTPASS
+# ========================
 
+VTPASS_BASE_URL = "https://sandbox.vtpass.com/api"
+
+def vtpass_headers():
+    api_key = os.getenv("VTPASS_API_KEY")
+    secret_key = os.getenv("VTPASS_SECRET_KEY")
+
+    return {
+        "Content-Type": "application/json",
+        "api-key": api_key,
+        "secret-key": secret_key
+    }
+
+
+def generate_request_id():
+    now = datetime.now()
+    return now.strftime("%Y%m%d%H%M%S")
+
+
+def vtpass_buy_data(service_id, variation_code, phone, amount):
+    request_id = generate_request_id()
+
+    payload = {
+        "request_id": request_id,
+        "serviceID": service_id,
+        "billersCode": phone,
+        "variation_code": variation_code,
+        "amount": amount,
+        "phone": phone
+    }
+
+    response = requests.post(
+        f"{VTPASS_BASE_URL}/pay",
+        headers=vtpass_headers(),
+        json=payload,
+        timeout=30
+    )
+
+    return response.json()
 
 # =========================
 # BUY DATA
