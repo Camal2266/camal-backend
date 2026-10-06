@@ -674,28 +674,30 @@ if purchase_type == "data" and (not service_id or not variation_code):
 
     conn = get_db()
 
-    conn.execute(
-        """
-        UPDATE users
-        SET balance = balance - ?
-        WHERE id = ?
-        """,
-        (amount, user["id"])
-    )
+cursor = conn.execute(
+    """
+    UPDATE users
+    SET balance = balance - ?
+    WHERE id = ?
+    """,
+    (amount, user["id"])
+)
 
-    conn.execute("""
-        INSERT INTO transactions
-        (
-            user_id,
-            type,
-            product,
-            phone,
-            amount,
-            status,
-            created_at
-        )
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    """, (
+cursor = conn.execute(
+    """
+    INSERT INTO transactions
+    (
+        user_id,
+        type,
+        product,
+        phone,
+        amount,
+        status,
+        created_at
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+    """,
+    (
         user["id"],
         purchase_type,
         product,
@@ -703,26 +705,149 @@ if purchase_type == "data" and (not service_id or not variation_code):
         amount,
         "pending",
         datetime.utcnow().isoformat()
-    ))
+    )
+)
 
-    conn.commit()
+transaction_id = cursor.lastrowid
 
-    new_user = conn.execute(
-        "SELECT balance FROM users WHERE id = ?",
-        (user["id"],)
-    ).fetchone()
+conn.commit()
 
-    conn.close()
+# ========================
+# VTPASS DATA PURCHASE
+# ========================
 
-    return jsonify({
-        "success": True,
-        "message": "Order created successfully",
-        "status": "pending",
-        "product": product,
-        "phone": phone,
-        "amount": amount,
-        "balance": new_user["balance"]
-    })
+if purchase_type == "data":
+
+    try:
+        vtpass_result = vtpass_buy_data(
+            service_id,
+            variation_code,
+            phone,
+            amount
+        )
+
+        code = str(vtpass_result.get("code", ""))
+
+        transaction_status = (
+            vtpass_result
+            .get("content", {})
+            .get("transactions", {})
+            .get("status", "")
+        )
+
+        if code == "000" and transaction_status == "delivered":
+            status = "successful"
+
+        elif code == "099" or transaction_status in [
+            "pending",
+            "initiated"
+        ]:
+            status = "pending"
+
+        else:
+            status = "failed"
+
+        # Refund wallet if VTpass failed
+        if status == "failed":
+            conn.execute(
+                """
+                UPDATE users
+                SET balance = balance + ?
+                WHERE id = ?
+                """,
+                (amount, user["id"])
+            )
+
+        conn.execute(
+            """
+            UPDATE transactions
+            SET status = ?
+            WHERE id = ?
+            """,
+            (status, transaction_id)
+        )
+
+        conn.commit()
+
+        new_user = conn.execute(
+            "SELECT balance FROM users WHERE id = ?",
+            (user["id"],)
+        ).fetchone()
+
+        conn.close()
+
+        return jsonify({
+            "success": status != "failed",
+            "message": (
+                "Data purchase successful"
+                if status == "successful"
+                else "Data purchase is pending"
+                if status == "pending"
+                else "Data purchase failed"
+            ),
+            "status": status,
+            "product": product,
+            "phone": phone,
+            "amount": amount,
+            "balance": new_user["balance"],
+            "vtpass": vtpass_result
+        })
+
+    except Exception:
+        conn.execute(
+            """
+            UPDATE users
+            SET balance = balance + ?
+            WHERE id = ?
+            """,
+            (amount, user["id"])
+        )
+
+        conn.execute(
+            """
+            UPDATE transactions
+            SET status = ?
+            WHERE id = ?
+            """,
+            ("failed", transaction_id)
+        )
+
+        conn.commit()
+
+        new_user = conn.execute(
+            "SELECT balance FROM users WHERE id = ?",
+            (user["id"],)
+        ).fetchone()
+
+        conn.close()
+
+        return jsonify({
+            "success": False,
+            "message": "VTpass connection failed",
+            "status": "failed",
+            "balance": new_user["balance"]
+        }), 500
+
+# ========================
+# OLD AIRTIME / RECHARGE
+# ========================
+
+new_user = conn.execute(
+    "SELECT balance FROM users WHERE id = ?",
+    (user["id"],)
+).fetchone()
+
+conn.close()
+
+return jsonify({
+    "success": True,
+    "message": "Order created successfully",
+    "status": "pending",
+    "product": product,
+    "phone": phone,
+    "amount": amount,
+    "balance": new_user["balance"]
+})
 
 
 # =========================
