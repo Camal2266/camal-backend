@@ -514,11 +514,15 @@ def vtpass_headers():
         "api-key": api_key,
         "secret-key": secret_key
     }
-
-
+    
 def generate_request_id():
-    now = datetime.now()
-    return now.strftime("%Y%m%d%H%M%S")
+    from datetime import datetime, timezone, timedelta
+
+    lagos_time = datetime.now(
+        timezone(timedelta(hours=1))
+    )
+
+    return lagos_time.strftime("%Y%m%d%H%M%S")
 
 
 def vtpass_buy_data(service_id, variation_code, phone, amount):
