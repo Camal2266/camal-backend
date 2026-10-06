@@ -654,7 +654,12 @@ variation_code = data.get("variation_code", "").strip()
         amount = 0
 
     if not product or not phone or amount <= 0:
-
+if purchase_type == "data" and (not service_id or not variation_code):
+    return jsonify({
+        "success": False,
+        "message": "Data plan information is required"
+    }), 400
+        
         return jsonify({
             "success": False,
             "message": "Invalid purchase details"
