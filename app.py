@@ -646,6 +646,8 @@ def process_purchase(purchase_type):
     product = data.get("product", "").strip()
     phone = data.get("phone", "").strip()
 
+    service_id = data.get("serviceID", "").strip()
+variation_code = data.get("variation_code", "").strip()
     try:
         amount = float(data.get("amount", 0))
     except (TypeError, ValueError):
