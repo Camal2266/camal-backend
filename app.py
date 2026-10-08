@@ -247,11 +247,11 @@ def register():
             "message": "All fields are required"
         }), 400
 
-    if len(password) < 6:
+    if len(password) < 8:
 
         return jsonify({
             "success": False,
-            "message": "Password must be at least 6 characters"
+            "message": "Password must be at least 8 characters"
         }), 400
 
     conn = get_db()
