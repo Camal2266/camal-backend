@@ -51,6 +51,11 @@ def init_db():
             ADD COLUMN role TEXT DEFAULT 'user'
         """)
 
+    if not any(column["name"] == "transaction_pin" for column in columns):
+    conn.execute("""
+        ALTER TABLE users
+        ADD COLUMN transaction_pin TEXT
+    """)
     conn.execute("""
         CREATE TABLE IF NOT EXISTS transactions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
