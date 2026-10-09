@@ -56,6 +56,9 @@ def init_db():
         ALTER TABLE users
         ADD COLUMN transaction_pin TEXT
     """)
+    columns = conn.execute(
+    "PRAGMA table_info(users)"
+).fetchall()
     conn.execute("""
         CREATE TABLE IF NOT EXISTS transactions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
