@@ -50,15 +50,15 @@ def init_db():
             ALTER TABLE users
             ADD COLUMN role TEXT DEFAULT 'user'
         """)
+        columns = conn.execute(
+    "PRAGMA table_info(users)"
+).fetchall()
 
     if not any(column["name"] == "transaction_pin" for column in columns):
     conn.execute("""
         ALTER TABLE users
         ADD COLUMN transaction_pin TEXT
     """)
-    columns = conn.execute(
-    "PRAGMA table_info(users)"
-).fetchall()
     conn.execute("""
         CREATE TABLE IF NOT EXISTS transactions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
