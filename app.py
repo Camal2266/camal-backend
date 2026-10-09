@@ -35,6 +35,7 @@ def init_db():
             balance REAL DEFAULT 0,
             token TEXT,
             role TEXT DEFAULT 'user',
+            transaction_pin TEXT,
             created_at TEXT NOT NULL
         )
     """)
